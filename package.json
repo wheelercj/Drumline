@@ -1,0 +1,18 @@
+{
+  "name": "site-limits",
+  "version": "0.0.1",
+  "description": "",
+  "author": "",
+  "license": "",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "build-firefox": "rollup --config rollup.config.firefox.mjs",
+    "build-chrome": "rollup --config rollup.config.chrome.mjs"
+  },
+  "devDependencies": {
+    "rollup": "^4.32.1",
+    "rollup-plugin-copy": "^3.5.0",
+    "rollup-plugin-delete": "^2.1.0"
+  }
+}

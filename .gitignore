@@ -1,0 +1,13 @@
+node_modules
+.DS_Store
+*.zip
+web-ext-artifacts
+.web-extension-id
+
+firefox/*
+!firefox/manifest.json
+!firefox/browserSpecific.js
+
+chrome/*
+!chrome/manifest.json
+!chrome/browserSpecific.js
