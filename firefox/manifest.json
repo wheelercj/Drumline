@@ -1,6 +1,6 @@
 {
     "manifest_version": 2,
-    "name": "Site Limits",
+    "name": "Drumline",
     "description": "",
     "version": "0.0.1",
     "developer": {
@@ -46,7 +46,7 @@
             "96": "images/drum-96.png",
             "128": "images/drum-128.png"
         },
-        "default_title": "Site Limits",
+        "default_title": "Drumline",
         "default_popup": "popup.html"
     },
     "commands": {}
