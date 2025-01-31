@@ -7,7 +7,9 @@
         "name": "Chris Wheeler"
     },
     "browser_specific_settings": {
-        "gecko": {}
+        "gecko": {
+            "id": "drumline@chriswheeler.dev"
+        }
     },
     "permissions": [
         "activeTab",
