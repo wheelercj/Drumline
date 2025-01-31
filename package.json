@@ -1,9 +1,9 @@
 {
   "name": "drumline",
   "version": "0.0.1",
-  "description": "",
-  "author": "",
-  "license": "",
+  "description": "A browser extension for managing and locally tracking your time on websites of your choice.",
+  "author": "Chris Wheeler",
+  "license": "Apache License version 2.0",
   "type": "module",
   "scripts": {
     "test": "node --test",
