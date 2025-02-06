@@ -17,6 +17,7 @@
 import { browser } from './browserSpecific.js';
 
 const defaultSettings = {
+    blockedDomains: [],
 };
 
 /**
