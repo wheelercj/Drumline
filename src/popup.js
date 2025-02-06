@@ -18,6 +18,7 @@ import { browser } from './browserSpecific.js';
 import { getSetting } from './getSetting.js';
 
 const blockButtonEl = document.querySelector('#blockButton');
+const refreshButtonEl = document.querySelector('#refreshButton');
 
 let currentTab;
 let currentDomain;
@@ -51,7 +52,7 @@ blockButtonEl.addEventListener('click', async () => {
             blockedDomains.splice(i, 1); // remove the current domain from the list
             await browser.storage.sync.set({ blockedDomains: blockedDomains });
             blockButtonEl.textContent = 'Block this domain';
-            // TODO: show page reload button
+            refreshButtonEl.style.display = 'block';
             return;
         }
     }
@@ -65,6 +66,13 @@ blockButtonEl.addEventListener('click', async () => {
         id: Math.random(), // why: https://github.com/Stardown-app/Stardown/issues/98
     });
     blockButtonEl.textContent = 'Unblock this domain';
+});
+
+refreshButtonEl.addEventListener('click', async () => {
+    // the user wants to reload the current page
+
+    browser.tabs.reload(currentTab.id);
+    refreshButtonEl.style.display = 'none';
 });
 
 main();
