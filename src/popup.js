@@ -59,12 +59,27 @@ blockButtonEl.addEventListener('click', async () => {
     // the current domain is not in the list of blocked domains yet
 
     blockedDomains.push(currentDomain);
-    await browser.storage.sync.set({ blockedDomains: blockedDomains });
+
+    try {
+        await browser.storage.sync.set({ blockedDomains: blockedDomains });
+    } catch (err) {
+        // https://developer.chrome.com/docs/extensions/reference/api/storage#property-sync
+        const m = `browser.storage.sync.set: ${err}`;
+        console.error(m);
+        browser.notifications.create('', {
+            type: 'basic',
+            iconUrl: 'images/drum-128.png',
+            title: 'Error',
+            message: m,
+        });
+    }
+
     browser.tabs.sendMessage(currentTab.id, {
         destination: 'content',
         category: 'blockCurrentDomain',
         id: Math.random(), // why: https://github.com/Stardown-app/Stardown/issues/98
     });
+
     blockButtonEl.textContent = 'Unblock this domain';
 });
 
