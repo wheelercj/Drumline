@@ -1,0 +1,46 @@
+{
+    "manifest_version": 3,
+    "name": "Drumline",
+    "description": "",
+    "version": "0.0.1",
+    "homepage_url": "https://github.com/wheelercj/Drumline",
+    "permissions": [
+        "activeTab",
+        "tabs",
+        "storage",
+        "notifications"
+    ],
+    "options_page": "settings.html",
+    "background": {
+        "service_worker": "background.js",
+        "type": "module"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "<all_urls>"
+            ],
+            "js": [
+                "content.js"
+            ]
+        }
+    ],
+    "icons": {
+        "16": "images/drum-16.png",
+        "32": "images/drum-32.png",
+        "48": "images/drum-48.png",
+        "96": "images/drum-96.png",
+        "128": "images/drum-128.png"
+    },
+    "action": {
+        "default_icon": {
+            "16": "images/drum-16.png",
+            "32": "images/drum-32.png",
+            "48": "images/drum-48.png",
+            "96": "images/drum-96.png",
+            "128": "images/drum-128.png"
+        },
+        "default_title": "Drumline",
+        "default_popup": "popup.html"
+    }
+}

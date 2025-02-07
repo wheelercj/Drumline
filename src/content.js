@@ -14,6 +14,7 @@
    limitations under the License.
 */
 
+import { browser } from './browserSpecific.js';
 import { getSetting } from './getSetting.js';
 
 function setUpListeners() {
