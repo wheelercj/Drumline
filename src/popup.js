@@ -49,6 +49,7 @@ blockButtonEl.addEventListener('click', async () => {
     for (let i = 0; i < blockedHostnames.length; i++) {
         // if the current hostname is already in the list of blocked hostnames
         if (blockedHostnames[i] === currentHostname) {
+            console.log('hostname is blocked');
             blockedHostnames.splice(i, 1); // remove the current hostname from the list
             await browser.storage.sync.set({ blockedHostnames: blockedHostnames });
             blockButtonEl.textContent = 'Block this site';
@@ -57,28 +58,76 @@ blockButtonEl.addEventListener('click', async () => {
         }
     }
     // the current hostname is not in the list of blocked hostnames yet
+    console.log('hostname is not blocked');
 
-    blockedHostnames.push(currentHostname);
 
+
+
+    // Get arrays containing new and old rules
+    const newRules = [{
+        id: 1,
+        priority: 1,
+        action: {
+            type: 'redirect',
+            redirect: { extensionPath: '/redirectTarget.html' },
+        },
+        condition: {
+            urlFilter: `||${currentHostname}/*`,
+            resourceTypes: ['main_frame'],
+        },
+    }];
+    const oldRules = await browser.declarativeNetRequest.getDynamicRules();
+    const oldRuleIds = oldRules.map(rule => rule.id);
+
+    // Use the arrays to update the dynamic rules
+    await browser.declarativeNetRequest.updateDynamicRules({
+        removeRuleIds: oldRuleIds,
+        addRules: newRules
+    });
+
+
+
+    const request = {
+        initiator: location.href,
+        // method: 'get',
+        tabId: currentTab.id,
+        type: 'main_frame',
+        url: '/redirectTarget.html',
+    };
+    let result = undefined;
     try {
-        await browser.storage.sync.set({ blockedHostnames: blockedHostnames });
+        result = await browser.declarativeNetRequest.testMatchOutcome(request);
+        console.log(`result: ${result}`);
+        console.log(`result.matchedRules: ${result.matchedRules}`);
+        console.log(`result.matchedRules.length: ${result.matchedRules.length}`);
     } catch (err) {
-        // https://developer.chrome.com/docs/extensions/reference/api/storage#property-sync
-        const m = `browser.storage.sync.set: ${err}`;
-        console.error(m);
-        browser.notifications.create('', {
-            type: 'basic',
-            iconUrl: 'images/drum-128.png',
-            title: 'Error',
-            message: m,
-        });
+        console.error(`testMatchOutcome: ${err}`);
     }
 
-    browser.tabs.sendMessage(currentTab.id, {
-        destination: 'content',
-        category: 'blockCurrentHostname',
-        id: Math.random(), // why: https://github.com/Stardown-app/Stardown/issues/98
-    });
+
+
+
+    // blockedHostnames.push(currentHostname);
+
+    // try {
+    //     await browser.storage.sync.set({ blockedHostnames: blockedHostnames });
+    // } catch (err) {
+    //     // https://developer.chrome.com/docs/extensions/reference/api/storage#property-sync
+    //     const m = `browser.storage.sync.set: ${err}`;
+    //     console.error(m);
+    //     browser.notifications.create('', {
+    //         type: 'basic',
+    //         iconUrl: 'images/drum-128.png',
+    //         title: 'Error',
+    //         message: m,
+    //     });
+    // }
+
+    // browser.tabs.sendMessage(currentTab.id, {
+    //     destination: 'content',
+    //     category: 'blockCurrentHostname',
+    //     id: Math.random(), // why: https://github.com/Stardown-app/Stardown/issues/98
+    // });
 
     blockButtonEl.textContent = 'Unblock this site';
 });
