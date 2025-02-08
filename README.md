@@ -19,3 +19,7 @@ I probably won't publish Drumline to any of the extension stores, but it can be 
 5. If you're using a Chromium browser, turn on developer mode
 6. Click "Load Temporary Add-on..." or "Load unpacked"
 7. If in Firefox, select Drumline's `firefox/manifest.json` file. If in a Chromium browser, select Drumline's `chrome` folder
+
+## Implementation
+
+*Why not use declarative net requests to block or redirect sites?* Declarative net requests make the implementation for this use case significantly more complicated and seem to offer almost no benefit because I don't mind letting a page fully load before replacing its HTML, and Drumline is not intended to increase security.
