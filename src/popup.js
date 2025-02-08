@@ -21,8 +21,8 @@ const blockButtonEl = document.querySelector('#blockButton');
 const refreshButtonEl = document.querySelector('#refreshButton');
 
 let currentTab;
-let currentDomain;
-let blockedDomains;
+let currentHostname;
+let blockedHostnames;
 
 async function main() {
     browser.tabs.query({ currentWindow: true, active: true }).then(async tabs => {
@@ -35,33 +35,33 @@ async function main() {
             return;
         }
 
-        currentDomain = new URL(currentTab.url).hostname;
-        blockedDomains = await getSetting('blockedDomains');
-        if (blockedDomains.includes(currentDomain)) {
-            blockButtonEl.textContent = 'Unblock this domain';
+        currentHostname = new URL(currentTab.url).hostname;
+        blockedHostnames = await getSetting('blockedHostnames');
+        if (blockedHostnames.includes(currentHostname)) {
+            blockButtonEl.textContent = 'Unblock this site';
         }
     });
 }
 
 blockButtonEl.addEventListener('click', async () => {
-    // the user wants to block or unblock the current domain
+    // the user wants to block or unblock the current site
 
-    for (let i = 0; i < blockedDomains.length; i++) {
-        // if the current domain is already in the list of blocked domains
-        if (blockedDomains[i] === currentDomain) {
-            blockedDomains.splice(i, 1); // remove the current domain from the list
-            await browser.storage.sync.set({ blockedDomains: blockedDomains });
-            blockButtonEl.textContent = 'Block this domain';
+    for (let i = 0; i < blockedHostnames.length; i++) {
+        // if the current hostname is already in the list of blocked hostnames
+        if (blockedHostnames[i] === currentHostname) {
+            blockedHostnames.splice(i, 1); // remove the current hostname from the list
+            await browser.storage.sync.set({ blockedHostnames: blockedHostnames });
+            blockButtonEl.textContent = 'Block this site';
             refreshButtonEl.style.display = 'block';
             return;
         }
     }
-    // the current domain is not in the list of blocked domains yet
+    // the current hostname is not in the list of blocked hostnames yet
 
-    blockedDomains.push(currentDomain);
+    blockedHostnames.push(currentHostname);
 
     try {
-        await browser.storage.sync.set({ blockedDomains: blockedDomains });
+        await browser.storage.sync.set({ blockedHostnames: blockedHostnames });
     } catch (err) {
         // https://developer.chrome.com/docs/extensions/reference/api/storage#property-sync
         const m = `browser.storage.sync.set: ${err}`;
@@ -76,11 +76,11 @@ blockButtonEl.addEventListener('click', async () => {
 
     browser.tabs.sendMessage(currentTab.id, {
         destination: 'content',
-        category: 'blockCurrentDomain',
+        category: 'blockCurrentHostname',
         id: Math.random(), // why: https://github.com/Stardown-app/Stardown/issues/98
     });
 
-    blockButtonEl.textContent = 'Unblock this domain';
+    blockButtonEl.textContent = 'Unblock this site';
 });
 
 refreshButtonEl.addEventListener('click', async () => {

@@ -60,10 +60,10 @@ setUpListeners();
 let lastRequestId = null;
 
 async function main() {
-    const blockedDomains = await getSetting('blockedDomains');
+    const blockedHostnames = await getSetting('blockedHostnames');
 
-    if (blockedDomains.includes(location.hostname)) {
-        await blockDomain();
+    if (blockedHostnames.includes(location.hostname)) {
+        await blockHostname();
     }
 }
 
@@ -84,8 +84,8 @@ async function handleRequest(message) {
     lastRequestId = message.id;
 
     switch (message.category) {
-        case 'blockCurrentDomain':
-            await blockDomain();
+        case 'blockCurrentHostname':
+            await blockHostname();
             break;
         default:
             console.error(`Unknown message category: ${message.category}`);
@@ -93,11 +93,11 @@ async function handleRequest(message) {
     }
 }
 
-async function blockDomain() {
+async function blockHostname() {
     document.body.innerHTML = `
         <div style="position: relative; height: 100vh; width: 100%;">
             <h1 style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; text-align: center;">
-                You blocked this domain with Drumline.
+                You blocked this site with Drumline.
             </h1>
         </div>
     `;

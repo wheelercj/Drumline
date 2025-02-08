@@ -2,7 +2,7 @@
 
 A simple browser extension for managing your time on websites of your choice.
 
-- track your time on specific domains
+- track your time on specific sites
 - set daily time limits
 - block sites during chosen times of each day, or indefinitely
 
