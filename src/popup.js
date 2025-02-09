@@ -15,79 +15,73 @@
 */
 
 import { browser } from './browserSpecific.js';
-import { getSetting } from './getSetting.js';
+import { getCurrentTab } from './getCurrentTab.js';
 
 const blockButtonEl = document.querySelector('#blockButton');
 const refreshButtonEl = document.querySelector('#refreshButton');
 
-let currentTab;
-let currentHostname;
-let blockedHostnames;
-
 async function main() {
-    browser.tabs.query({ currentWindow: true, active: true }).then(async tabs => {
-        if (!tabs || tabs.length === 0) {
-            return;
-        }
-
-        currentTab = tabs[0];
-        if (!currentTab.url) {
-            return;
-        }
-
-        currentHostname = new URL(currentTab.url).hostname;
-        blockedHostnames = await getSetting('blockedHostnames');
-        if (blockedHostnames.includes(currentHostname)) {
-            blockButtonEl.textContent = 'Unblock this site';
-        }
+    const response = await browser.runtime.sendMessage({
+        destination: 'background',
+        category: 'isHostnameBlocked',
     });
+    if (!response) {
+        const m = `response: ${response}`;
+        console.error(m);
+        throw m;
+    }
+
+    if (response.answer === 'yes') {
+        blockButtonEl.textContent = 'Unblock this site';
+    }
 }
 
-blockButtonEl.addEventListener('click', async () => {
-    // the user wants to block or unblock the current site
-
-    for (let i = 0; i < blockedHostnames.length; i++) {
-        // if the current hostname is already in the list of blocked hostnames
-        if (blockedHostnames[i] === currentHostname) {
-            blockedHostnames.splice(i, 1); // remove the current hostname from the list
-            await browser.storage.sync.set({ blockedHostnames: blockedHostnames });
-            blockButtonEl.textContent = 'Block this site';
-            refreshButtonEl.style.display = 'block';
-            return;
-        }
+browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+    if (message.destination !== 'popup') {
+        return;
     }
-    // the current hostname is not in the list of blocked hostnames yet
 
-    blockedHostnames.push(currentHostname);
+    switch (message.category) {
+        case 'hostnameIsBlocked':
+            blockButtonEl.textContent = 'Block this site';
+            refreshButtonEl.style.visibility = 'hidden'; // hide the refresh button
+            break;
+        case 'hostnameIsNotBlocked':
+            blockButtonEl.textContent = 'Unblock this site';
+            refreshButtonEl.style.visibility = 'hidden'; // hide the refresh button
+            break;
+        default:
+            console.error(`Unknown message category: ${message.category}`);
+            throw new Error(`Unknown message category: ${message.category}`);
+    }
+});
 
-    try {
-        await browser.storage.sync.set({ blockedHostnames: blockedHostnames });
-    } catch (err) {
-        // https://developer.chrome.com/docs/extensions/reference/api/storage#property-sync
-        const m = `browser.storage.sync.set: ${err}`;
-        console.error(m);
-        browser.notifications.create('', {
-            type: 'basic',
-            iconUrl: 'images/drum-128.png',
-            title: 'Error',
-            message: m,
+blockButtonEl.addEventListener('click', async () => {
+    // block or unblock the current site
+
+    if (blockButtonEl.textContent === 'Block this site') {
+        blockButtonEl.textContent = 'Unblock this site';
+        browser.runtime.sendMessage({
+            destination: 'background',
+            category: 'blockCurrentHostname',
+        });
+    } else {
+        refreshButtonEl.style.visibility = 'visible'; // show the refresh button
+        blockButtonEl.textContent = 'Block this site';
+        browser.runtime.sendMessage({
+            destination: 'background',
+            category: 'unblockCurrentHostname',
         });
     }
-
-    browser.tabs.sendMessage(currentTab.id, {
-        destination: 'content',
-        category: 'blockCurrentHostname',
-        id: Math.random(), // why: https://github.com/Stardown-app/Stardown/issues/98
-    });
-
-    blockButtonEl.textContent = 'Unblock this site';
 });
 
 refreshButtonEl.addEventListener('click', async () => {
-    // the user wants to reload the current page
+    // reload the current page
 
-    browser.tabs.reload(currentTab.id);
-    refreshButtonEl.style.display = 'none';
+    await getCurrentTab(async currentTab => {
+        browser.tabs.reload(currentTab.id);
+    });
+    refreshButtonEl.style.visibility = 'hidden'; // hide the refresh button
 });
 
 main();

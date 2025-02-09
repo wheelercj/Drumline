@@ -12,8 +12,10 @@
         }
     },
     "permissions": [
+        "<all_urls>",
         "activeTab",
         "tabs",
+        "scripting",
         "storage",
         "notifications"
     ],
@@ -51,6 +53,5 @@
         },
         "default_title": "Drumline",
         "default_popup": "popup.html"
-    },
-    "commands": {}
+    }
 }
