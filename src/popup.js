@@ -43,12 +43,10 @@ browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
 
     switch (message.category) {
         case 'hostnameIsBlocked':
-            blockButtonEl.textContent = 'Block this site';
-            refreshButtonEl.style.visibility = 'hidden'; // hide the refresh button
+            blockButtonEl.textContent = 'Unblock this site';
             break;
         case 'hostnameIsNotBlocked':
-            blockButtonEl.textContent = 'Unblock this site';
-            refreshButtonEl.style.visibility = 'hidden'; // hide the refresh button
+            blockButtonEl.textContent = 'Block this site';
             break;
         default:
             console.error(`Unknown message category: ${message.category}`);
@@ -60,6 +58,7 @@ blockButtonEl.addEventListener('click', async () => {
     // block or unblock the current site
 
     if (blockButtonEl.textContent === 'Block this site') {
+        refreshButtonEl.style.visibility = 'hidden'; // hide the refresh button
         blockButtonEl.textContent = 'Unblock this site';
         browser.runtime.sendMessage({
             destination: 'background',

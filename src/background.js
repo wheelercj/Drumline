@@ -96,6 +96,7 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     let category;
     if (isCurrentlyBlocked(rule)) {
         category = 'hostnameIsBlocked';
+        await execBlockScript(rule);
     } else {
         category = 'hostnameIsNotBlocked';
     }
@@ -104,6 +105,10 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
         destination: 'popup',
         category: category,
     }).catch(err => {
+        if (err.message === 'Could not establish connection. Receiving end does not exist.') {
+            // the popup is closed
+            return;
+        }
         console.log(`background sendMessage to popup: ${err}`);
     });
 });
@@ -145,6 +150,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 console.error(`No rule found for hostname ${currentHostname}`);
                 return;
             }
+            rules.delete(currentHostname);
             // browser.storage.sync.set({
             //     TODO: save the rule change
             // });
@@ -166,7 +172,9 @@ async function execBlockScript(rule) {
         args: [rule],
     }).then(injectionResults => {
         for (const { frameId, result } of injectionResults) {
-            console.log(`Frame ${frameId} result: ${result}`);
+            if (result !== undefined) {
+                console.log(`Frame ${frameId} result: ${result}`);
+            }
         }
     });
 }
