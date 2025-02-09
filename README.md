@@ -23,3 +23,7 @@ I probably won't publish Drumline to any of the extension stores, but it can be 
 ## Implementation
 
 *Why not use declarative net requests to block or redirect sites?* Declarative net requests make the implementation for this use case significantly more complicated and seem to offer almost no benefit because I don't mind letting a page fully load before replacing its HTML, and Drumline is not intended to increase security.
+
+### Storage limits
+
+It's important to keep track of which sites to block, when to block them, etc. including through browser restarts and device changes. That's why those settings are stored in [sync storage](https://developer.chrome.com/docs/extensions/reference/api/storage#storage_areas). However, sync storage has a limit of about 8 KB per item. If most of the commonly used hostnames are around 10 to 20 characters long, then Drumline can block up to roughly 350 to 700 sites while keeping the implementation simple. This seems like plenty to me for now. Other settings categories that need to store more than just the hostname, like daily time limits, will have slightly less capacity.

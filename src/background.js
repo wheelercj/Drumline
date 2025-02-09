@@ -16,6 +16,7 @@
 
 import { browser } from './browserSpecific.js';
 import { getCurrentTab } from './getCurrentTab.js';
+import { getSetting } from './getSetting.js';
 
 /**
  * @typedef {object} Rule
@@ -32,7 +33,7 @@ import { getCurrentTab } from './getCurrentTab.js';
  * @type {Map<string, Rule>} - the keys are hostnames.
  */
 const rules = new Map();
-// TODO: load the rules from sync storage
+loadRules(rules);
 
 /** @type {number|undefined} */
 let currentTabId = undefined;
@@ -139,11 +140,9 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     blocked: true,
                 };
             }
-            rules.set(currentHostname, rule);
             execBlockScript(rule);
-            // browser.storage.sync.set({
-            //     TODO: save the rule change
-            // });
+            rules.set(currentHostname, rule);
+            saveRules(rules, 'blocked');
             break;
         case 'unblockCurrentHostname':
             if (!rule) {
@@ -151,9 +150,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 return;
             }
             rules.delete(currentHostname);
-            // browser.storage.sync.set({
-            //     TODO: save the rule change
-            // });
+            saveRules(rules, 'blocked');
             break;
         default:
             console.error(`Unknown message category: ${message.category}`);
@@ -191,4 +188,52 @@ async function blockSite(rule) {
             </h1>
         </div>
     `;
+}
+
+function saveRules(rules, categoryChanged) {
+    switch (categoryChanged) {
+        case 'blocked':
+            const blockedHostnames = [];
+            for (const [hostname, rule] of rules) {
+                if (rule.blocked) {
+                    blockedHostnames.push(hostname);
+                }
+            }
+            browser.storage.sync.set({ blocked: blockedHostnames.join(' ') });
+            break;
+        case 'dailyBlockTimes':
+            // TODO
+            // browser.storage.sync.set({ dailyBlockTimes:  });
+            break;
+        case 'tracked':
+            // TODO
+            // browser.storage.sync.set({ tracked:  });
+            break;
+        case 'dailyTimeLimit':
+            // TODO
+            // browser.storage.sync.set({ dailyTimeLimit:  });
+            break;
+        default:
+            const m = `Unknown setting category: ${categoryChanged}`;
+            console.error(m);
+            throw m;
+    }
+}
+
+async function loadRules(rules) {
+    const blockedHostnamesStr = await getSetting('blocked');
+    const blockedHostnames = blockedHostnamesStr.split(' ');
+    for (let i = 0; i < blockedHostnames.length; i++) {
+        const hostname = blockedHostnames[i];
+        const rule = rules.get(hostname);
+        if (!rule) {
+            rules.set(hostname, { blocked: true });
+        } else {
+            rule.blocked = true;
+        }
+    }
+
+    // TODO: load dailyBlockTimes
+    // TODO: load tracked
+    // TODO: load dailyTimeLimit
 }
