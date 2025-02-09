@@ -52,13 +52,6 @@ export default [
         ]
     },
     {
-        input: 'chrome/content.js',
-        output: {
-            file: 'chrome/content.js',
-            format: 'iife', // immediately-invoked function expression
-        },
-    },
-    {
         input: 'chrome/popup.js',
         output: {
             file: 'chrome/popup.js',
@@ -87,7 +80,6 @@ export default [
 
                     '!chrome/browserSpecific.js',
                     '!chrome/background.js',
-                    '!chrome/content.js',
                     '!chrome/popup.js',
                     '!chrome/settings.js',
                 ],

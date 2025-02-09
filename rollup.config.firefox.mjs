@@ -80,13 +80,6 @@ export default [
         ]
     },
     {
-        input: 'firefox/content.js',
-        output: {
-            file: 'firefox/content.js',
-            format: 'iife', // immediately-invoked function expression
-        },
-    },
-    {
         input: 'firefox/popup.js',
         output: {
             file: 'firefox/popup.js',
@@ -115,7 +108,6 @@ export default [
 
                     '!firefox/browserSpecific.js',
                     '!firefox/background.js',
-                    '!firefox/content.js',
                     '!firefox/popup.js',
                     '!firefox/settings.js',
                 ],
