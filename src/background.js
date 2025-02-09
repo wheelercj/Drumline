@@ -19,11 +19,10 @@ import { getCurrentTab } from './getCurrentTab.js';
 
 /**
  * @typedef {object} Rule
- * @property {boolean|undefined} blocked
- * @property {string[]|undefined} blockTimes - the daily times to block e.g. ["0-14:30",
- * "22-24"].
+ * @property {boolean|undefined} blocked - whether the site is blocked all day every day.
+ * @property {string[]|undefined} dailyBlockTimes - e.g. ["0-14:30", "22-24"].
  * @property {boolean|undefined} tracked
- * @property {string|undefined} limit - the daily time limit, e.g. "0:15" for 15 minutes.
+ * @property {string|undefined} dailyTimeLimit - e.g. "0:15" for 15 minutes.
  */
 
 // TODO: decide how to store tracking data. It should probably be stored in local:
@@ -46,7 +45,7 @@ let currentHostname = undefined;
  * @returns {boolean}
  */
 function isCurrentlyBlocked(rule) {
-    // TODO: also check blockTimes and limit
+    // TODO: also check dailyBlockTimes and dailyTimeLimit
     return rule && rule.blocked;
 }
 
