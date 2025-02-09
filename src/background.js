@@ -199,7 +199,17 @@ function saveRules(rules, categoryChanged) {
                     blockedHostnames.push(hostname);
                 }
             }
-            browser.storage.sync.set({ blocked: blockedHostnames.join(' ') });
+            browser.storage.sync.set({ blocked: blockedHostnames.join(' ') })
+                .catch(err => {
+                    const m = `While saving blocked hostnames: ${err.message}`;
+                    console.error(m);
+                    browser.notifications.create('', {
+                        type: 'basic',
+                        iconUrl: 'images/drum-128.png',
+                        title: 'Storage error',
+                        message: m,
+                    });
+                });
             break;
         case 'dailyBlockTimes':
             // TODO
