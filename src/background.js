@@ -21,7 +21,7 @@ import { getSetting } from './getSetting.js';
 /**
  * @typedef {object} Rule
  * @property {boolean|undefined} blocked - whether the site is blocked all day every day.
- * @property {string[]|undefined} dailyBlockTimes - e.g. ["0-14:30", "22-24"].
+ * @property {string|undefined} dailyBlockTimes - e.g. "0-14:30, 22-24".
  * @property {boolean|undefined} tracked
  * @property {string|undefined} dailyTimeLimit - e.g. "0:15" for 15 minutes.
  */

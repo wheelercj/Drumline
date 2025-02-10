@@ -39,6 +39,17 @@
       <button id="blockButton" type="button">
         Block this site
       </button>
+      <div>
+        <input type="radio" id="blockIndefinitely" name="blockContinuity" checked />
+        <label for="blockIndefinitely">
+          indefinitely
+        </label>
+        <br />
+        <input type="radio" id="blockAtDailyTimes" name="blockContinuity" />
+        <label for="blockAtDailyTimes">
+          daily at <input type="text" id="dailyBlockTimes" placeholder="0-14:30, 22-24" />
+        </label>
+      </div>
     </main>
 
     <script src="./popup.js"></script>
