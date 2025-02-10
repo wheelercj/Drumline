@@ -17,7 +17,7 @@
 import { browser } from './browserSpecific.js';
 
 const defaultSettings = {
-    blockedHostnames: [],
+    blocked: '',
 };
 
 /**
