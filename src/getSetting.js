@@ -18,6 +18,9 @@ import { browser } from './browserSpecific.js';
 
 const defaultSettings = {
     blocked: '',
+    dailyBlockTimes: '',
+    tracked: '',
+    dailyTimeLimit: '',
 };
 
 /**

@@ -46,8 +46,60 @@ let currentHostname = undefined;
  * @returns {boolean}
  */
 function isCurrentlyBlocked(rule) {
-    // TODO: also check dailyBlockTimes and dailyTimeLimit
-    return rule && rule.blocked;
+    if (!rule) {
+        return false;
+    } else if (rule.blocked) {
+        return true;
+    } else if (rule.dailyBlockTimes) {
+        const now = new Date();
+        const nowHour = now.getHours();
+        const nowMinute = now.getMinutes();
+
+        const timeRanges = rule.dailyBlockTimes.split(',');
+        for (let i = 0; i < timeRanges.length; i++) {
+            const timeRange = timeRanges[i];
+            const times = timeRange.split('-');
+            const startTime = times[0];
+            const endTime = times[1];
+            let startHour = 0;
+            let startMinute = 0;
+            let endHour = 0;
+            let endMinute = 0;
+            if (startTime.includes(':')) {
+                const startTimeArray = startTime.split(':');
+                startHour = parseInt(startTimeArray[0]);
+                startMinute = parseInt(startTimeArray[1]);
+            } else {
+                startHour = parseInt(startTime);
+            }
+            if (endTime.includes(':')) {
+                const endTimeArray = endTime.split(':');
+                endHour = parseInt(endTimeArray[0]);
+                endMinute = parseInt(endTimeArray[1]);
+            } else {
+                endHour = parseInt(endTime);
+            }
+
+            if (nowHour > startHour && nowHour < endHour) {
+                return true;
+            } else if (
+                startHour === endHour &&
+                nowHour === startHour &&
+                nowMinute >= startMinute &&
+                nowMinute < endMinute
+            ) {
+                return true;
+            } else if (nowHour === startHour && nowMinute >= startMinute) {
+                return true;
+            } else if (nowHour === endHour && nowMinute < endMinute) {
+                return true;
+            }
+        }
+    }
+
+    // TODO: also check dailyTimeLimit
+
+    return false;
 }
 
 getCurrentTab(async tab => {
@@ -68,10 +120,14 @@ browser.tabs.onActivated.addListener(activeInfo => {
             currentHostname = new URL(tab.url).hostname;
             const rule = rules.get(currentHostname);
             if (isCurrentlyBlocked(rule)) {
-                browser.runtime.sendMessage({
+                const message = {
                     destination: 'popup',
                     category: 'hostnameIsBlocked',
-                }).catch(err => {
+                };
+                if (rule.dailyBlockTimes) {
+                    message.dailyBlockTimes = rule.dailyBlockTimes;
+                }
+                browser.runtime.sendMessage(message).catch(err => {
                     console.log(`background sendMessage to popup: ${err}`);
                 });
             }
@@ -94,18 +150,21 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     currentHostname = new URL(tab.url).hostname;
     const rule = rules.get(currentHostname);
 
-    let category;
+    const message = {
+        destination: 'popup',
+    };
+
     if (isCurrentlyBlocked(rule)) {
-        category = 'hostnameIsBlocked';
+        message.category = 'hostnameIsBlocked';
+        if (rule.dailyBlockTimes) {
+            message.dailyBlockTimes = rule.dailyBlockTimes;
+        }
         await execBlockScript(rule);
     } else {
-        category = 'hostnameIsNotBlocked';
+        message.category = 'hostnameIsNotBlocked';
     }
 
-    browser.runtime.sendMessage({
-        destination: 'popup',
-        category: category,
-    }).catch(err => {
+    browser.runtime.sendMessage(message).catch(err => {
         if (err.message === 'Could not establish connection. Receiving end does not exist.') {
             // the popup is closed
             return;
@@ -127,9 +186,11 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     switch (message.category) {
         case 'isHostnameBlocked':
             if (isCurrentlyBlocked(rule)) {
-                sendResponse({ answer: 'yes' });
+                sendResponse({ answer: 'yes', rule: rule });
+                // rule may be undefined
             } else {
-                sendResponse({ answer: 'no' });
+                sendResponse({ answer: 'no', rule: rule });
+                // rule may be undefined
             }
             break;
         case 'blockCurrentHostnameIndefinitely':
@@ -139,22 +200,46 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 rule = {
                     blocked: true,
                 };
+                rules.set(currentHostname, rule);
             }
             execBlockScript(rule);
-            rules.set(currentHostname, rule);
             saveRules(rules, 'blocked');
             break;
         case 'blockCurrentHostnameAtDailyTimes':
-            const times = message.times;
-            // TODO
+            if (rule) {
+                rule.dailyBlockTimes = message.times;
+            } else {
+                rule = {
+                    dailyBlockTimes: message.times,
+                };
+                rules.set(currentHostname, rule);
+            }
+            if (isCurrentlyBlocked(rule)) {
+                execBlockScript(rule);
+            }
+            saveRules(rules, 'dailyBlockTimes');
             break;
         case 'unblockCurrentHostname':
             if (!rule) {
                 console.error(`No rule found for hostname ${currentHostname}`);
                 return;
             }
-            rules.delete(currentHostname);
+            delete rule.blocked;
+            if (Object.keys(rule).length > 0) {
+                rules.delete(currentHostname);
+            }
             saveRules(rules, 'blocked');
+            break;
+        case 'deleteCurrentHostnameDailyBlockRule':
+            if (!rule) {
+                console.error(`No rule found for hostname ${currentHostname}`);
+                return;
+            }
+            delete rule.dailyBlockTimes;
+            if (Object.keys(rule).length > 0) {
+                rules.delete(currentHostname);
+            }
+            saveRules(rules, 'dailyBlockTimes');
             break;
         default:
             console.error(`Unknown message category: ${message.category}`);
@@ -194,6 +279,10 @@ async function blockSite(rule) {
     `;
 }
 
+/**
+ * @param {Map<string, Rule>} rules
+ * @param {string} categoryChanged
+ */
 function saveRules(rules, categoryChanged) {
     switch (categoryChanged) {
         case 'blocked':
@@ -216,8 +305,23 @@ function saveRules(rules, categoryChanged) {
                 });
             break;
         case 'dailyBlockTimes':
-            // TODO
-            // browser.storage.sync.set({ dailyBlockTimes:  });
+            const hostnameTimes = [];
+            for (const [hostname, rule] of rules) {
+                if (rule.dailyBlockTimes) {
+                    hostnameTimes.push(`${hostname} ${rule.dailyBlockTimes}`);
+                }
+            }
+            browser.storage.sync.set({ dailyBlockTimes: hostnameTimes.join('$') })
+                .catch(err => {
+                    const m = `While saving daily block times: ${err.message}`;
+                    console.error(m);
+                    browser.notifications.create('', {
+                        type: 'basic',
+                        iconUrl: 'images/drum-128.png',
+                        title: 'Storage error',
+                        message: m,
+                    });
+                });
             break;
         case 'tracked':
             // TODO
@@ -234,20 +338,38 @@ function saveRules(rules, categoryChanged) {
     }
 }
 
+/**
+ * @param {Map<string, Rule>} rules
+ */
 async function loadRules(rules) {
     const blockedHostnamesStr = await getSetting('blocked');
-    const blockedHostnames = blockedHostnamesStr.split(' ');
-    for (let i = 0; i < blockedHostnames.length; i++) {
-        const hostname = blockedHostnames[i];
-        const rule = rules.get(hostname);
-        if (!rule) {
-            rules.set(hostname, { blocked: true });
-        } else {
-            rule.blocked = true;
+    if (blockedHostnamesStr) {
+        const blockedHostnames = blockedHostnamesStr.split(' ');
+        for (let i = 0; i < blockedHostnames.length; i++) {
+            const hostname = blockedHostnames[i];
+            const rule = rules.get(hostname);
+            if (!rule) {
+                rules.set(hostname, { blocked: true });
+            } else {
+                rule.blocked = true;
+            }
         }
     }
 
-    // TODO: load dailyBlockTimes
+    const dailyBlockTimesStr = await getSetting('dailyBlockTimes');
+    if (dailyBlockTimesStr) {
+        const hostnameTimes = dailyBlockTimesStr.split('$');
+        for (let i = 0; i < hostnameTimes.length; i++) {
+            const [hostname, times] = hostnameTimes[i].split(' ');
+            const rule = rules.get(hostname);
+            if (!rule) {
+                rules.set(hostname, { dailyBlockTimes: times });
+            } else {
+                rule.dailyBlockTimes = times;
+            }
+        }
+    }
+
     // TODO: load tracked
     // TODO: load dailyTimeLimit
 }

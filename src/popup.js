@@ -37,6 +37,22 @@ async function main() {
     if (response.answer === 'yes') {
         blockButtonEl.textContent = 'Unblock this site';
     }
+
+    const rule = response.rule;
+    if (!rule) {
+        return;
+    }
+
+    if (response.answer === 'no') {
+        blockButtonEl.textContent = "Remove daily block";
+    }
+
+    // show in the popup the current settings for this site
+    if (rule.dailyBlockTimes) {
+        dailyBlockTimesEl.value = rule.dailyBlockTimes;
+        blockAtDailyTimesEl.checked = true;
+        blockIndefinitelyEl.checked = false;
+    }
 }
 
 browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
@@ -47,6 +63,9 @@ browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
     switch (message.category) {
         case 'hostnameIsBlocked':
             blockButtonEl.textContent = 'Unblock this site';
+            if (message.dailyBlockTimes) {
+                dailyBlockTimesEl.value = message.dailyBlockTimes;
+            }
             break;
         case 'hostnameIsNotBlocked':
             blockButtonEl.textContent = 'Block this site';
@@ -58,19 +77,20 @@ browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
 });
 
 blockButtonEl.addEventListener('click', async () => {
-    // block or unblock the current site
+    // block or unblock the current site, or delete the site rule
 
     if (blockButtonEl.textContent === 'Block this site') {
         refreshButtonEl.style.visibility = 'hidden'; // hide the refresh button
-        blockButtonEl.textContent = 'Unblock this site';
         if (blockIndefinitelyEl.checked) {
+            blockButtonEl.textContent = 'Unblock this site';
             browser.runtime.sendMessage({
                 destination: 'background',
                 category: 'blockCurrentHostnameIndefinitely',
             });
         } else if (blockAtDailyTimesEl.checked) {
+            blockButtonEl.textContent = "Remove daily block";
             const times = dailyBlockTimesEl.value.replaceAll(' ', '');
-            validateTimes(times);
+            await validateTimes(times);
             browser.runtime.sendMessage({
                 destination: 'background',
                 category: 'blockCurrentHostnameAtDailyTimes',
@@ -79,13 +99,21 @@ blockButtonEl.addEventListener('click', async () => {
         } else {
             throw 'Not implemented';
         }
-    } else { // unblock the site
+    } else if (blockButtonEl.textContent === 'Unblock this site') {
         refreshButtonEl.style.visibility = 'visible'; // show the refresh button
         blockButtonEl.textContent = 'Block this site';
         browser.runtime.sendMessage({
             destination: 'background',
             category: 'unblockCurrentHostname',
         });
+    } else if (blockButtonEl.textContent === "Remove daily block") {
+        blockButtonEl.textContent = 'Block this site';
+        browser.runtime.sendMessage({
+            destination: 'background',
+            category: 'deleteCurrentHostnameDailyBlockRule',
+        });
+    } else {
+        throw `Unknown block button text: ${blockButtonEl.textContent}`;
     }
 });
 
@@ -101,8 +129,9 @@ refreshButtonEl.addEventListener('click', async () => {
 /**
  * @param {string} title
  * @param {string} message
+ * @returns {Promise<void>}
  */
-function showNotification(title, message) {
+async function showNotification(title, message) {
     browser.notifications.create('', {
         type: 'basic',
         iconUrl: 'images/drum-128.png',
@@ -115,24 +144,45 @@ function showNotification(title, message) {
  * validateTimes validates the times input and, if needed, shows the user a notification
  * with an error message and throws an error.
  * @param {string} timesRangesStr
- * @returns {void}
+ * @returns {Promise<void>}
  * @throws {string}
  */
-function validateTimes(timesRangesStr) {
+async function validateTimes(timesRangesStr) {
     const timeRanges = timesRangesStr.split(',');
     for (let i = 0; i < timeRanges.length; i++) {
         const timeRange = timeRanges[i];
         const times = timeRange.split('-');
         if (times.length !== 2) {
             const m = 'Any time entered must be in ranges';
-            showNotification('Input error', m);
+            await showNotification('Input error', m);
             throw `Input error: ${m}`;
         }
 
-        const startTime = times[0].split(':');
-        const endTime = times[1].split(':');
-        validateTime(startTime, 'Start', i);
-        validateTime(endTime, 'End', i);
+        const startTime = times[0].split(':'); // [hour] or [hour, minute]
+        const endTime = times[1].split(':'); // [hour] or [hour, minute]
+        await validateTime(startTime, 'Start', i);
+        await validateTime(endTime, 'End', i);
+        const startTimeHour = parseInt(startTime[0]);
+        const endTimeHour = parseInt(endTime[0]);
+        if (startTimeHour > endTimeHour) {
+            const m = `Each time range's start must be less than its end`;
+            await showNotification('Input error', m);
+            throw `Input error: ${m}`;
+        } else if (startTimeHour === endTimeHour) {
+            let startTimeMinute = 0;
+            let endTimeMinute = 0;
+            if (startTime.length === 2) {
+                startTimeMinute = parseInt(startTime[1]);
+            }
+            if (endTime.length === 2) {
+                endTimeMinute = parseInt(endTime[1]);
+            }
+            if (startTimeMinute >= endTimeMinute) {
+                const m = `Each time range's start must be less than its end`;
+                await showNotification('Input error', m);
+                throw `Input error: ${m}`;
+            }
+        }
     }
 }
 
@@ -142,21 +192,21 @@ function validateTimes(timesRangesStr) {
  * @param {string[]} time - the hour, or the hour and minute.
  * @param {string} name - a name for the time to use in error messages.
  * @param {number} rangeIndex - the index of the range the time is in.
- * @returns {void}
+ * @returns {Promise<void>}
  * @throws {string}
  */
-function validateTime(time, name, rangeIndex) {
+async function validateTime(time, name, rangeIndex) {
     if (time.length > 2) {
         const m = `${name} time in time range with index ${rangeIndex} must have zero or one colon`;
-        showNotification('Input error', m);
+        await showNotification('Input error', m);
         throw `Input error: ${m}`;
     }
 
     const hour = time[0];
-    validateTimeHand(name, hour, 'hour', rangeIndex);
+    await validateTimeHand(name, hour, 'hour', rangeIndex);
     if (time.length === 2) {
         const minute = time[1];
-        validateTimeHand(name, minute, 'minute', rangeIndex);
+        await validateTimeHand(name, minute, 'minute', rangeIndex);
     }
 }
 
@@ -167,10 +217,10 @@ function validateTime(time, name, rangeIndex) {
  * @param {string} hand - the hour or the minute.
  * @param {string} handName - "hour" or "minute".
  * @param {number} rangeIndex - the index of the range the time is in.
- * @returns {void}
+ * @returns {Promise<void>}
  * @throws {string}
  */
-function validateTimeHand(timeName, hand, handName, rangeIndex) {
+async function validateTimeHand(timeName, hand, handName, rangeIndex) {
     const handInt = parseInt(hand);
 
     let errorMessage = undefined;
@@ -188,7 +238,7 @@ function validateTimeHand(timeName, hand, handName, rangeIndex) {
 
     if (errorMessage) {
         errorMessage = `${timeName} time's ${handName} in time range with index ${rangeIndex} must ` + errorMessage;
-        showNotification('Input error', errorMessage);
+        await showNotification('Input error', errorMessage);
         throw `Input error: ${errorMessage}`;
     }
 }
