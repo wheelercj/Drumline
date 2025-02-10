@@ -18,6 +18,7 @@ import { browser } from './browserSpecific.js';
 
 /**
  * @param {async function(Tab): void} f
+ * @returns {Promise<void>}
  */
 export async function getCurrentTab(f) {
     browser.tabs.query({ currentWindow: true, active: true }).then(async tabs => {
