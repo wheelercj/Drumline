@@ -132,7 +132,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 sendResponse({ answer: 'no' });
             }
             break;
-        case 'blockCurrentHostname':
+        case 'blockCurrentHostnameIndefinitely':
             if (rule) {
                 rule.blocked = true;
             } else {
@@ -143,6 +143,10 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
             execBlockScript(rule);
             rules.set(currentHostname, rule);
             saveRules(rules, 'blocked');
+            break;
+        case 'blockCurrentHostnameAtDailyTimes':
+            const times = message.times;
+            // TODO
             break;
         case 'unblockCurrentHostname':
             if (!rule) {

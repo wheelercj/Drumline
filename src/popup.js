@@ -17,8 +17,11 @@
 import { browser } from './browserSpecific.js';
 import { getCurrentTab } from './getCurrentTab.js';
 
-const blockButtonEl = document.querySelector('#blockButton');
 const refreshButtonEl = document.querySelector('#refreshButton');
+const blockButtonEl = document.querySelector('#blockButton');
+const blockIndefinitelyEl = document.querySelector('#blockIndefinitely');
+const blockAtDailyTimesEl = document.querySelector('#blockAtDailyTimes');
+const dailyBlockTimesEl = document.querySelector('#dailyBlockTimes');
 
 async function main() {
     const response = await browser.runtime.sendMessage({
@@ -60,11 +63,23 @@ blockButtonEl.addEventListener('click', async () => {
     if (blockButtonEl.textContent === 'Block this site') {
         refreshButtonEl.style.visibility = 'hidden'; // hide the refresh button
         blockButtonEl.textContent = 'Unblock this site';
-        browser.runtime.sendMessage({
-            destination: 'background',
-            category: 'blockCurrentHostname',
-        });
-    } else {
+        if (blockIndefinitelyEl.checked) {
+            browser.runtime.sendMessage({
+                destination: 'background',
+                category: 'blockCurrentHostnameIndefinitely',
+            });
+        } else if (blockAtDailyTimesEl.checked) {
+            const times = dailyBlockTimesEl.value.replaceAll(' ', '');
+            validateTimes(times);
+            browser.runtime.sendMessage({
+                destination: 'background',
+                category: 'blockCurrentHostnameAtDailyTimes',
+                times: times,
+            });
+        } else {
+            throw 'Not implemented';
+        }
+    } else { // unblock the site
         refreshButtonEl.style.visibility = 'visible'; // show the refresh button
         blockButtonEl.textContent = 'Block this site';
         browser.runtime.sendMessage({
@@ -82,5 +97,100 @@ refreshButtonEl.addEventListener('click', async () => {
     });
     refreshButtonEl.style.visibility = 'hidden'; // hide the refresh button
 });
+
+/**
+ * @param {string} title
+ * @param {string} message
+ */
+function showNotification(title, message) {
+    browser.notifications.create('', {
+        type: 'basic',
+        iconUrl: 'images/drum-128.png',
+        title: title,
+        message: message,
+    });
+}
+
+/**
+ * validateTimes validates the times input and, if needed, shows the user a notification
+ * with an error message and throws an error.
+ * @param {string} timesRangesStr
+ * @returns {void}
+ * @throws {string}
+ */
+function validateTimes(timesRangesStr) {
+    const timeRanges = timesRangesStr.split(',');
+    for (let i = 0; i < timeRanges.length; i++) {
+        const timeRange = timeRanges[i];
+        const times = timeRange.split('-');
+        if (times.length !== 2) {
+            const m = 'Any time entered must be in ranges';
+            showNotification('Input error', m);
+            throw `Input error: ${m}`;
+        }
+
+        const startTime = times[0].split(':');
+        const endTime = times[1].split(':');
+        validateTime(startTime, 'Start', i);
+        validateTime(endTime, 'End', i);
+    }
+}
+
+/**
+ * validateTime validates the time input and, if needed, shows the user a notification
+ * with an error message and throws an error.
+ * @param {string[]} time - the hour, or the hour and minute.
+ * @param {string} name - a name for the time to use in error messages.
+ * @param {number} rangeIndex - the index of the range the time is in.
+ * @returns {void}
+ * @throws {string}
+ */
+function validateTime(time, name, rangeIndex) {
+    if (time.length > 2) {
+        const m = `${name} time in time range with index ${rangeIndex} must have zero or one colon`;
+        showNotification('Input error', m);
+        throw `Input error: ${m}`;
+    }
+
+    const hour = time[0];
+    validateTimeHand(name, hour, 'hour', rangeIndex);
+    if (time.length === 2) {
+        const minute = time[1];
+        validateTimeHand(name, minute, 'minute', rangeIndex);
+    }
+}
+
+/**
+ * validateTimeHand validates the hour or minute input and, if needed, shows the user a
+ * notification with an error message and throws an error.
+ * @param {string} timeName - a name for the time to use in error messages.
+ * @param {string} hand - the hour or the minute.
+ * @param {string} handName - "hour" or "minute".
+ * @param {number} rangeIndex - the index of the range the time is in.
+ * @returns {void}
+ * @throws {string}
+ */
+function validateTimeHand(timeName, hand, handName, rangeIndex) {
+    const handInt = parseInt(hand);
+
+    let errorMessage = undefined;
+    if (hand.length === 0) {
+        errorMessage = 'not be empty';
+    } else if (isNaN(handInt)) {
+        errorMessage = 'be an integer';
+    } else if (handInt < 0) {
+        errorMessage = 'not be negative';
+    } else if (handName === 'hour' && handInt > 24) {
+        errorMessage = 'not be greater than 24';
+    } else if (handName === 'minute' && handInt > 59) {
+        errorMessage = 'not be greater than 59';
+    }
+
+    if (errorMessage) {
+        errorMessage = `${timeName} time's ${handName} in time range with index ${rangeIndex} must ` + errorMessage;
+        showNotification('Input error', errorMessage);
+        throw `Input error: ${errorMessage}`;
+    }
+}
 
 main();
