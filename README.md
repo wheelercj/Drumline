@@ -26,4 +26,9 @@ I probably won't publish Drumline to any of the extension stores, but it can be 
 
 ### Storage limits
 
-It's important to keep track of which sites to block, when to block them, etc. including through browser restarts and device changes. That's why those settings are stored in [sync storage](https://developer.chrome.com/docs/extensions/reference/api/storage#storage_areas). However, sync storage has a limit of about 8 KB per item. If most of the commonly used hostnames are around 10 to 20 characters long, then Drumline can block up to roughly 350 to 700 sites while keeping the implementation simple. This seems like plenty to me for now. Other settings categories that need to store more than just the hostname, like daily time limits, will have slightly less capacity. In any case, a system notification will appear if a storage limit is reached.
+It's important to keep track of which sites to block, when to block them, etc. through browser restarts and device changes. That's why those settings are stored in [sync storage](https://developer.chrome.com/docs/extensions/reference/api/storage#storage_areas). However, sync storage has a limit of about 8 KB per item and up to 512 items. If most of the commonly used hostnames are around 10 to 20 characters long, then Drumline has these approximate storage limits:
+
+- indefinitely block up to roughly 350 to 700 sites
+- set daily block times on up to roughly 200 to 400 sites
+
+A system notification will appear if a storage limit is reached. There are ways to increase these limits by making the implementation more complicated, but I don't see any need to right now.
