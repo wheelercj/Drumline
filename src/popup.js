@@ -17,6 +17,10 @@
 import { browser } from './browserSpecific.js';
 import { getCurrentTab } from './getCurrentTab.js';
 
+/**
+ * @typedef {import('./background.js').Rule} Rule
+ */
+
 const refreshButtonEl = document.querySelector('#refreshButton');
 const blockButtonEl = document.querySelector('#blockButton');
 const blockIndefinitelyEl = document.querySelector('#blockIndefinitely');
@@ -34,17 +38,21 @@ async function main() {
         throw m;
     }
 
+    /** @type {Rule|undefined} */
+    const rule = response.rule;
+
     if (response.answer === 'yes') {
-        blockButtonEl.textContent = 'Unblock this site';
+        if (rule && rule.dailyBlockTimes) {
+            blockButtonEl.textContent = 'Remove daily block'
+        } else {
+            blockButtonEl.textContent = 'Unblock this site';
+        }
+    } else {
+        blockButtonEl.textContent = 'Block this site';
     }
 
-    const rule = response.rule;
     if (!rule) {
         return;
-    }
-
-    if (response.answer === 'no') {
-        blockButtonEl.textContent = "Remove daily block";
     }
 
     // show in the popup the current settings for this site
@@ -88,7 +96,7 @@ blockButtonEl.addEventListener('click', async () => {
                 category: 'blockCurrentHostnameIndefinitely',
             });
         } else if (blockAtDailyTimesEl.checked) {
-            blockButtonEl.textContent = "Remove daily block";
+            blockButtonEl.textContent = 'Remove daily block';
             const times = dailyBlockTimesEl.value.replaceAll(' ', '');
             await validateTimes(times);
             browser.runtime.sendMessage({
@@ -106,7 +114,7 @@ blockButtonEl.addEventListener('click', async () => {
             destination: 'background',
             category: 'unblockCurrentHostname',
         });
-    } else if (blockButtonEl.textContent === "Remove daily block") {
+    } else if (blockButtonEl.textContent === 'Remove daily block') {
         blockButtonEl.textContent = 'Block this site';
         browser.runtime.sendMessage({
             destination: 'background',
