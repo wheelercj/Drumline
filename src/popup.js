@@ -115,6 +115,7 @@ blockButtonEl.addEventListener('click', async () => {
             category: 'unblockCurrentHostname',
         });
     } else if (blockButtonEl.textContent === 'Remove daily block') {
+        refreshButtonEl.style.visibility = 'visible'; // show the refresh button
         blockButtonEl.textContent = 'Block this site';
         browser.runtime.sendMessage({
             destination: 'background',
