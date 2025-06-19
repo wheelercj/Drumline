@@ -96,9 +96,9 @@ blockButtonEl.addEventListener('click', async () => {
                 category: 'blockCurrentHostnameIndefinitely',
             });
         } else if (blockAtDailyTimesEl.checked) {
-            blockButtonEl.textContent = 'Remove daily block';
             const times = dailyBlockTimesEl.value.replaceAll(' ', '');
             await validateTimes(times);
+            blockButtonEl.textContent = 'Remove daily block';
             browser.runtime.sendMessage({
                 destination: 'background',
                 category: 'blockCurrentHostnameAtDailyTimes',
